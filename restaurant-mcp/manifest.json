@@ -1,0 +1,30 @@
+{
+  "name": "restaurant-mcp",
+  "display_name": "Restaurant MCP Server",
+  "description": "AI-agent-accessible restaurant server with x402 micropayments, D1 CRM, and live shopping add-on",
+  "industry": "restaurant",
+  "phase1": {
+    "bindings": {
+      "kv": ["PRICING_KV"],
+      "d1": ["CRM_DB"],
+      "durable_objects": [{ "binding": "MCPSERVER", "class_name": "PaidMCP" }],
+      "queues": ["SETTLEMENT_QUEUE"],
+      "ai": true
+    }
+  },
+  "phase2": {
+    "bindings": {
+      "r2": [{ "binding": "MEDIA_BUCKET", "bucket_name": "restaurant-media" }],
+      "stream_live_inputs": [{ "binding": "LIVE_INPUT", "name": "restaurant-live" }]
+    },
+    "requires_user_api_token": true
+  },
+  "pricing_defaults": {
+    "get_menu": { "amount": "0.01", "description": "Full menu with prices" },
+    "get_hours": { "amount": "0", "description": "Business hours (free)" },
+    "reserve_table": { "amount": "0.05", "description": "Table reservation" },
+    "place_takeout_order": { "amount": "0.10", "description": "Takeout order placement" },
+    "watch_live_kitchen": { "amount": "0.02", "description": "Per-minute live kitchen cam" },
+    "generate_marketing_copy": { "amount": "0.03", "description": "AI-generated social media post" }
+  }
+}

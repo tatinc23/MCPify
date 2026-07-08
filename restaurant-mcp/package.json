@@ -1,0 +1,26 @@
+{
+  "name": "restaurant-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:temp": "bash scripts/deploy-phase1.sh",
+    "deploy:full": "wrangler deploy --config wrangler.phase2.toml",
+    "post-claim": "tsx scripts/post-claim-setup.ts",
+    "detect-claim": "tsx scripts/claim-detector.ts",
+    "db:migrate": "wrangler d1 migrations apply CRM_DB"
+  },
+  "dependencies": {
+    "agents": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@x402/core": "^2.0.0",
+    "@x402/evm": "^2.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250701.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.102.0",
+    "tsx": "^4.19.0"
+  }
+}

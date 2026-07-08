@@ -1,0 +1,39 @@
+name = "restaurant-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-07-08"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "PRICING_KV"
+
+[[d1_databases]]
+binding = "CRM_DB"
+database_name = "restaurant-crm"
+
+[[durable_objects.bindings]]
+name = "MCPSERVER"
+class_name = "PaidMCP"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PaidMCP"]
+
+[[queues.producers]]
+binding = "SETTLEMENT_QUEUE"
+queue = "x402-settlement"
+
+[[queues.consumers]]
+queue = "x402-settlement"
+max_batch_size = 100
+max_batch_timeout = 60
+
+[ai]
+binding = "AI"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "restaurant-media"
+
+# Stream live input UID stored as secret: LIVE_INPUT_ID
+# Stream API token stored as secret: STREAM_API_TOKEN
+# Account ID stored as secret: ACCOUNT_ID

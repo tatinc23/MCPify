@@ -1,0 +1,32 @@
+{
+  "get_menu": {
+    "amount": "0.01",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  },
+  "get_hours": {
+    "amount": "0",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  },
+  "reserve_table": {
+    "amount": "0.05",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  },
+  "place_takeout_order": {
+    "amount": "0.10",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  },
+  "watch_live_kitchen": {
+    "amount": "0.02",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  },
+  "generate_marketing_copy": {
+    "amount": "0.03",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "eip155:84532"
+  }
+}
