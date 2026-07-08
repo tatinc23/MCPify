@@ -1,12 +1,3 @@
-That bonus structure from Lee is absolute gold. He basically handed you the keys to a high-throughput, **decentralized asynchronous settlement clearinghouse**.
-
-By separating the **Tenant Workers** (which run on the SMBs' own free tiers) from your centralized **Settlement Worker** via a Cloudflare Queue, he completely solved the noisy-neighbor problem and transaction concurrency. Your platform won't bottle neck, and you won't bleed gas fees because your master cron handles the compression.
-
-Here is the fully aligned, complete production markdown for your `README.md`. I have integrated the true repository tree and mapped out Lee’s architectural bonus right into the core system overview so anyone landing on your repo immediately understands the sheer scale of what you are building.
-
----
-
-```markdown
 # 🚀 MCPify: The Shopify for the Agentic Web
 
 MCPify is a high-performance, multi-tenant middleware framework built on **Cloudflare Workers** that enables businesses, creators, and developers to instantly deploy, manage, and monetize Model Context Protocol (MCP) servers. 
