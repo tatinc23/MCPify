@@ -1,0 +1,32 @@
+name = "x402-settlement-worker"
+main = "src/index.ts"
+compatibility_date = "2026-07-08"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "SETTLEMENT_DB"
+database_name = "x402-settlement-ledger"
+database_id = "<your-d1-database-id>"
+
+[[kv_namespaces]]
+binding = "PLATFORM_KV"
+id = "<your-kv-namespace-id>"
+
+[[queues.producers]]
+binding = "INTERNAL_QUEUE"
+queue = "settlement-ingest"
+
+[[queues.consumers]]
+queue = "settlement-ingest"
+max_batch_size = 100
+max_batch_timeout = 10
+max_retries = 3
+dead_letter_queue = "settlement-dlq"
+
+[[queues.consumers]]
+queue = "settlement-dlq"
+max_batch_size = 10
+max_retries = 1
+
+[triggers]
+crons = ["*/5 * * * *"]
