@@ -159,7 +159,7 @@ There is no escrow because there is no interval during which funds are "held." T
 
 ## 5. Security Considerations & Load-Bearing Conjectures
 
-An honest clean sheet names its own foundations. Prior art first: the "payment completion reveals the decryption key" mechanism is the **zero-knowledge contingent payment (zkCP)** pattern from the Bitcoin literature (Maxwell, concept 2011; executed on-chain 2016), generalized here via adaptor signatures; blind mandates are Chaumian ecash (1982). What is unprecedented in this document is the *composition* — welding zkCP-style delivery to blind FHE execution, VDF-clocked Dutch auctions, registryless capability resonance, and single-scalar path settlement — not the individual mechanisms.
+An honest clean sheet names its own foundations. Prior art first: the "payment completion reveals the decryption key" mechanism is the **zero-knowledge contingent payment (zkCP)** pattern from the Bitcoin literature (Maxwell, concept 2011; executed on-chain 2016), generalized here via adaptor signatures; blind mandates are Chaumian ecash (1982). Closest contemporary work: **A402** (arXiv:2603.01179, 2026) independently binds x402 payments to service execution using TEE-assisted (AMD SEV-SNP) Schnorr adaptor signatures over "atomic service channels" — the same witness-reveal atomicity as §4, traded against hardware trust for practical throughput. What this document adds is the *composition* — welding contingent delivery to blind FHE execution (no TEE), VDF-clocked Dutch auctions, registryless capability resonance, blind-mint fiat mandates, and single-scalar path settlement — not the individual mechanisms.
 
 Three conjectures are load-bearing:
 
