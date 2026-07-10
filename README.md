@@ -135,3 +135,5 @@ MCPify is actively working with the **x402 Foundation Technical Steering Committ
 1. **Edge Session Management:** Eliminating repetitive handshake overhead with paid-state cookies via the new Workers Cache APIs.
 2. **Pre-flight Price Discovery:** Implementing zero-cost budget maps via `/.well-known/x402`.
 3. **Buyer Escrow Verification:** Protecting agents from paying for server failures (`500 Internal Server Errors`).
+
+- [JMT x402 Agent Tools](https://jmt-x402-proxy.jmthomasofficial.workers.dev) — 25 paid x402 endpoints on Base mainnet: web search, AI analysis, crypto/stock data, SEC filings, company intel, news, sentiment, macro dashboard. $0.001-$0.15/call USDC. Local LLM-powered.
