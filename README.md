@@ -1,137 +1,112 @@
-# 🚀 MCPify: The Shopify for the Agentic Web
+# 🚀 MCPify
 
-MCPify is a high-performance, multi-tenant middleware framework built on **Cloudflare Workers** that enables businesses, creators, and developers to instantly deploy, manage, and monetize Model Context Protocol (MCP) servers. 
+**Monetization middleware for the agentic web — turn any MCP server into a paid storefront.**
 
-By marrying Cloudflare’s edge infrastructure with the open **x402 protocol** and **Stripe Connect**, MCPify turns any web resource, API endpoint, or data asset into a micro-transactional storefront optimized for autonomous AI agents.
+MCPify is a multi-tenant middleware framework built on **Cloudflare Workers** that lets businesses, creators, and developers deploy, manage, and monetize Model Context Protocol (MCP) servers. It pairs Cloudflare's edge with the open **x402 payment protocol** and **Stripe Connect**, so an AI agent can discover a tool, receive an `HTTP 402 Payment Required` challenge, pay in USDC, and the merchant gets paid out in plain dollars to their bank account.
 
----
-
-## 🌟 Key Features
-
-*   **Zero-Friction SMB Onboarding:** Leverage Cloudflare’s `wrangler deploy --temporary` primitive to let businesses preview a custom, AI-generated MCP server in seconds with zero configuration or upfront sign-up.
-*   **Edge-Native HTTP 402 Handshakes:** Intercept agent traffic at the Cloudflare edge, evaluate programmatic pricing rules, issue standard `HTTP 402 Payment Required` challenges, and validate cryptographic payment signatures in sub-10ms.
-*   **Asynchronous Clearinghouse Engine:** Offload heavy payment operations from individual client sites using decoupled Cloudflare Queues to ingest, batch, and compress micro-vouchers seamlessly.
-*   **Off-Chain Batch Settlement:** Settle fractional-cent transactions natively in **USDC via Base** using x402’s `batch-settlement` (EIP-712/EIP-3009) to completely avoid network gas bleed on micro-requests.
-*   **Fiat-Settled Merchant Payouts:** Fully integrated with **Stripe Connect** to seamlessly abstract away web3 complexities—allowing everyday small businesses to collect agent revenue directly into their traditional bank accounts.
-*   **Modular Enterprise Add-ons:** Drop-in support for turn-key edge templates, including pay-per-minute WebRTC video gating via **Cloudflare Stream**, content generation via **Workers AI**, and agentic analytics via **D1**.
+> **Status:** active development. The settlement worker and restaurant blueprint below are working reference implementations; binding IDs in `wrangler.toml` are placeholders you supply at deploy time. Not yet production-hardened — see [docs/](docs/) for the current state of each subsystem.
 
 ---
 
-## 🛠️ Project Structure & Architecture
+## 🌟 What it does
+
+*   **Edge-native x402 handshakes** — intercept agent traffic at the Cloudflare edge, evaluate pricing rules, issue standard `402` challenges, and verify cryptographic payment signatures before the request ever reaches origin.
+*   **Asynchronous clearinghouse** — payment operations never block the data path. Verified payment vouchers are enqueued to Cloudflare Queues, ingested into a D1 ledger, and settled in batches.
+*   **Off-chain batch settlement** — fractional-cent transactions settle in **USDC on Base** via x402 `batch-settlement` (EIP-712 / EIP-3009), avoiding per-request gas entirely.
+*   **Fiat payouts via Stripe Connect** — merchants never touch a wallet. Agent revenue arrives as a normal Stripe payout. See [docs/stripe-webhook.md](docs/stripe-webhook.md) and [docs/payment-lifecycle.md](docs/payment-lifecycle.md).
+*   **Zero-friction onboarding flow** — an automated loop scrapes a business URL, generates a tool schema, and deploys an ephemeral preview MCP server the owner can claim (`deploy:temp` → `detect-claim` → `deploy:full`).
+*   **Modular add-ons** — pay-per-minute WebRTC video gating via Cloudflare Stream, content generation via Workers AI, analytics via D1.
+
+---
+
+## 🛠️ Repository layout
+
+Two components: the **platform settlement worker** (repo root) and a **complete tenant blueprint** (`restaurant-mcp/`).
 
 ```text
-restaurant-mcp/
-├── manifest.json
-├── package.json
-├── tsconfig.json
-├── wrangler.phase1.toml          # Temp-safe deployment target (no R2/Stream required)
-├── wrangler.phase2.toml          # Post-claim environment target (full asset bindings)
-├── migrations/
-│   └── 0001_init.sql             # D1 schema for tenant configuration, metrics, & caching
-├── pricing/
-│   └── defaults.json             # x402 tool capability pricing schemas
-├── scripts/
-│   ├── deploy-phase1.sh          # Handles automated temporary deployment loops
-│   ├── post-claim-setup.ts       # Injector for R2 buckets, Stream tokens, and platform keys
-│   └── claim-detector.ts         # Heartbeat polling script to catch when an account is claimed
-└── src/
-    ├── index.ts                  # Entry Worker + multi-tenant x402 middleware router
-    ├── mcp-server.ts             # PaidMCP Durable Object (Manages JSON-RPC protocol states)
-    ├── x402-middleware.ts        # Dynamic crypto payment signature verification and headers
-    ├── stream-handler.ts         # Phase 2: Pay-per-minute live shopping WebRTC player proxy
-    ├── media-transform.ts        # Phase 2: R2 video storage ingest + auto-cropping automation
-    └── types.ts                  # Shared platform types and protocol contracts
-
+.
+├── wrangler.toml                 # x402-settlement-worker (D1 + KV + Queues bindings)
+├── src/                          # Platform clearinghouse
+│   ├── index.ts                  # Queue ingest + 5-min settlement cron
+│   ├── on-chain-settlement.ts    # USDC/Base batch settlement (EIP-3009)
+│   ├── stripe-client.ts          # Stripe Connect transfers & payouts
+│   ├── stripe-webhook.ts         # Async signature verification (constructEventAsync)
+│   ├── tenant-relay-snippet.ts   # Drop-in voucher relay for tenant workers
+│   └── types.ts
+├── migrations/                   # D1 ledger schema + payment lifecycle states
+├── scripts/                      # Temp-deploy, claim detection, post-claim setup
+├── restaurant-mcp/               # Blueprint: a paid MCP server for a restaurant
+│   ├── manifest.json             # Tool schema
+│   ├── pricing/defaults.json     # Per-tool x402 pricing
+│   ├── src/                      # Entry worker, PaidMCP Durable Object,
+│   │                             #   x402 middleware, WebRTC stream gating
+│   └── wrangler.phase1/2.toml    # Ephemeral preview vs. claimed-account targets
+└── docs/                         # Architecture, lifecycle, and research documents
 ```
 
----
-
-## 💳 Settlement Architecture: The Multi-Tenant Clearinghouse
-
-MCPify scales infinitely by decoupling data delivery from payment processing. Instead of slowing down client data paths with synchronous blockchain settlement or external API calls, the network executes via a high-throughput, queue-backed ledger design:
+### Settlement architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  TENANT WORKERS (SMB accounts)                              │
-│                                                             │
-│  Each tenant's Worker enforces edge-level x402 challenges.  │
-│  On verified signature → enqueue to SETTLEMENT_QUEUE.       │
-│  Payload: tool, amount, agent_wallet, merchant_address, etc.│
+│  TENANT WORKERS (one per merchant)                          │
+│  Enforce edge x402 challenges. On verified signature →      │
+│  enqueue voucher {tool, amount, agent_wallet, merchant…}    │
 └──────────────────────┬──────────────────────────────────────┘
-                       │ Asynchronous Queue Messaging
+                       │ Cloudflare Queues (async)
 ┌──────────────────────▼──────────────────────────────────────┐
-│  SETTLEMENT WORKER (Platform Master Account)                │
+│  SETTLEMENT WORKER (platform)                               │
+│  queue()     — ingest vouchers into the D1 ledger           │
+│  scheduled() — 5-min cron: compress + settle aggregate      │
+│                balances (USDC batch / Stripe transfer)      │
 │                                                             │
-│  Two dedicated handlers manage the clearinghouse:           │
-│  1. queue()     — Ingests incoming vouchers into D1 ledger. │
-│  2. scheduled() — Cron triggers every 5m to compress and    │
-│                   settle aggregate balances via Stripe.     │
-│                                                             │
-│  Bindings:                                                  │
-│  • SETTLEMENT_QUEUE (Queue) — Multi-tenant entry streams    │
-│  • SETTLEMENT_DB (D1)       — Distributed master ledger     │
-│  • PLATFORM_KV (KV)         — Global Merchant Registry      │
+│  SETTLEMENT_DB (D1) · PLATFORM_KV (KV) · settlement-ingest  │
 └─────────────────────────────────────────────────────────────┘
-
 ```
+
+Deep dives: [architecture-overview](docs/architecture-overview.md) · [settlement-flow](docs/settlement-flow.md) · [payment-status-lifecycle](docs/payment-status-lifecycle.md) · [secrets-setup](docs/secrets-setup.md)
 
 ---
 
-## 🚀 Quick Start (Zero-Signup Onboarding)
-
-MCPify utilizes an autonomous agent loop to scrape a business URL, generate an optimized tool schema, and spin up an ephemeral preview environment.
-
-### Phase 1: Silent Temporary Deployment
-
-Generate and push a custom storefront to an ephemeral Cloudflare preview account:
+## 🚀 Quick start
 
 ```bash
 npm install
-npm run deploy:temp
-
-```
-
-### Phase 2: Detect & Claim Account Handoff
-
-Monitor when the business owner claims the temporary 60-minute zone and safely hand off custody to their permanent environment:
-
-```bash
-npm run detect-claim
-
-```
-
-### Phase 3: Post-Claim Activation (R2 + Stream Add-ons)
-
-Inject environment variables, establish your platform's Stripe billing hooks, and provision edge resource bindings (Cloudflare D1, R2, and Stream):
-
-```bash
+npm run deploy:temp     # Phase 1: ephemeral preview deployment (no sign-up)
+npm run detect-claim    # Phase 2: poll until the owner claims the preview
 export CF_ACCOUNT_ID="your-claimed-account-id"
 export CF_API_TOKEN="your-claimed-zone-token"
-npm run post-claim
+npm run post-claim      # Phase 3: inject bindings (D1, R2, Stream) + Stripe hooks
 npm run deploy:full
-
 ```
 
----
+## 📐 Blueprint: the paid restaurant server
 
-## 📐 Blueprint Implementation Metrics
+`restaurant-mcp/` shows an agent browsing, querying, and transacting with a local business:
 
-The included `restaurant-mcp` directory demonstrates how an automated agent browses, queries, and interacts with a local business by settling usage-based payments on the fly:
-
-| MCP Tool | Price | Settlement Scheme | Description |
+| MCP Tool | Price | Scheme | Description |
 | --- | --- | --- | --- |
-| `get_hours` | **Free** | Unauthenticated | Standard business operational hours |
-| `get_menu` | **$0.01 USDC** | x402 Request Signature | Parses fresh markdown of items & daily specials |
-| `reserve_table` | **$0.05 USDC** | x402 Request Signature | Directly updates internal booking database |
-| `place_order` | **$0.10 USDC** | x402 Request Signature | Dispatches transactional payload to POS system |
-| `stream_kitchen` | **$0.02 USDC/min** | x402 Stream Proxy | Gated, sub-second WebRTC kitchen livestream |
+| `get_hours` | **Free** | Unauthenticated | Business hours |
+| `get_menu` | **$0.01 USDC** | x402 `exact` | Fresh menu + daily specials |
+| `reserve_table` | **$0.05 USDC** | x402 `exact` | Writes to the booking database |
+| `place_order` | **$0.10 USDC** | x402 `exact` | Dispatches order to the POS |
+| `stream_kitchen` | **$0.02 USDC/min** | x402 stream proxy | Gated WebRTC kitchen livestream |
 
 ---
 
-## 🤝 Contributing & Community Insights
+## 🔬 Protocol research & upstream work
 
-MCPify is actively working with the **x402 Foundation Technical Steering Committee (TSC)** to enhance machine-to-machine commerce standards. We are currently addressing protocol expansions around:
+We build on the [x402 protocol](https://github.com/x402-foundation/x402) and contribute design work back upstream. Current threads:
 
-1. **Edge Session Management:** Eliminating repetitive handshake overhead with paid-state cookies via the new Workers Cache APIs.
-2. **Pre-flight Price Discovery:** Implementing zero-cost budget maps via `/.well-known/x402`.
-3. **Buyer Escrow Verification:** Protecting agents from paying for server failures (`500 Internal Server Errors`).
+1.  **`contingent` scheme (upstream draft PR)** — atomic contingent delivery: settlement and delivery as one cryptographic event via adaptor pre-signatures over EIP-3009, zero on-chain changes. Spec: [scheme_contingent](docs/upstream/specs/schemes/contingent/scheme_contingent.md) · [EVM instantiation](docs/upstream/specs/schemes/contingent/scheme_contingent_evm.md) · [working draft](docs/x402-contingent-scheme-draft-2026-07-10.md).
+2.  **Pre-flight price discovery** ([#2](https://github.com/tatinc23/MCPify/issues/2)) — zero-cost budget maps via `/.well-known/x402`, with the quote-binding invariant *"never authorize spend from a 402 body alone"* (sharpened by community feedback from [@0xbrainkid](https://github.com/0xbrainkid)).
+3.  **Edge session management** ([#1](https://github.com/tatinc23/MCPify/issues/1)) — paid-state cookies via the Workers Cache API to eliminate repeat-handshake overhead.
+4.  **Buyer protection for server failures** ([#3](https://github.com/tatinc23/MCPify/issues/3)) — superseded in our thinking by the `contingent` scheme above, which makes payment-without-delivery unconstructible rather than compensated.
+5.  **[x402-Quantum](docs/x402-quantum-spec-2026-07-10.md)** — a *speculative design essay* (explicitly not an implemented or proven protocol) composing zkCP-style contingent payment, FHE, and VDF price ramps into a registryless agent-commerce thought experiment. Read its §5 caveats before quoting it.
+
+Feedback and issues welcome — the research docs are meant to be argued with.
+
+---
+
+## 🏢 About
+
+Built by [TAT Inc](https://tatinc.us). *The future belongs to those who play.*
