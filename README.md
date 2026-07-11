@@ -95,7 +95,7 @@ npm run deploy:full
 
 ## 🔬 Protocol research & upstream work
 
-We build on the [x402 protocol](https://github.com/x402-foundation/x402) and contribute design work back upstream. Current threads:
+We build on the [x402 protocol](https://github.com/x402-foundation/x402) and participate in the x402 Foundation community — TSC meetings and the `#wg-domain-discovery` working group — contributing design work back upstream. Current threads:
 
 1.  **`contingent` scheme (upstream draft PR)** — atomic contingent delivery: settlement and delivery as one cryptographic event via adaptor pre-signatures over EIP-3009, zero on-chain changes. Spec: [scheme_contingent](docs/upstream/specs/schemes/contingent/scheme_contingent.md) · [EVM instantiation](docs/upstream/specs/schemes/contingent/scheme_contingent_evm.md) · [working draft](docs/x402-contingent-scheme-draft-2026-07-10.md).
 2.  **Pre-flight price discovery** ([#2](https://github.com/tatinc23/MCPify/issues/2)) — zero-cost budget maps via `/.well-known/x402`, with the quote-binding invariant *"never authorize spend from a 402 body alone"* (sharpened by community feedback from [@0xbrainkid](https://github.com/0xbrainkid)).
